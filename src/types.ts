@@ -125,6 +125,18 @@ export interface UseExternalWindowReturn {
   focus: () => void;
   
   /**
+   * Request fullscreen mode for the external window
+   * Returns true if fullscreen was requested, false if API is unavailable or request failed
+   * Note: Some browsers (like Safari on iOS) don't support fullscreen for external windows
+   */
+  fullscreen: () => Promise<boolean>;
+  
+  /**
+   * Whether the fullscreen API is available on this device/browser
+   */
+  canFullscreen: boolean;
+  
+  /**
    * Whether the external window is currently open
    */
   isOpen: boolean;
@@ -138,5 +150,7 @@ export interface UseExternalWindowReturn {
     move: (left: number, top: number) => void;
     resize: (width: number, height: number) => void;
     focus: () => void;
+    fullscreen: () => Promise<boolean>;
+    canFullscreen: boolean;
     externalWindow: Window | null;
   }

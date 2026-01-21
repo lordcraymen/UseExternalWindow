@@ -21,6 +21,7 @@ describe('useExternalWindow', () => {
       createElement: (tagName: string) => document.createElement(tagName),
       styleSheets: [] as unknown as StyleSheetList,
       readyState: 'complete', // about:blank is immediately ready
+      documentElement: {} as any,
     };
 
     // Create mock window
@@ -411,6 +412,7 @@ describe('useExternalWindow with object features', () => {
       body: document.createElement('body'),
       createElement: (tagName: string) => document.createElement(tagName),
       styleSheets: [] as unknown as StyleSheetList,
+      documentElement: {} as any,
     };
 
     mockWindow = {
@@ -553,3 +555,198 @@ describe('useExternalWindow with object features', () => {
       expect(mockResize).toHaveBeenCalledWith(800, 600);
     });
   });
+
+  describe('fullscreen', () => {
+    let mockWindow: Partial<Window> & { closed: boolean };
+    let mockDocument: Partial<Document>;
+    let originalWindowOpen: typeof window.open;
+
+    beforeEach(() => {
+      originalWindowOpen = window.open;
+
+      mockDocument = {
+        title: '',
+        head: document.createElement('head'),
+        body: document.createElement('body'),
+        createElement: (tagName: string) => document.createElement(tagName),
+        styleSheets: [] as unknown as StyleSheetList,
+        documentElement: {
+          requestFullscreen: vi.fn(async function(this: any) {
+            return Promise.resolve();
+          }),
+        } as any,
+      };
+
+      mockWindow = {
+        document: mockDocument as Document,
+        closed: false,
+        close: vi.fn(function(this: any) {
+          this.closed = true;
+        }),
+        focus: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      };
+
+      window.open = vi.fn(() => mockWindow as Window);
+    });
+
+    afterEach(() => {
+      window.open = originalWindowOpen;
+      vi.restoreAllMocks();
+    });
+
+    it('should request fullscreen when available', async () => {
+      const { result } = renderHook(() => useExternalWindow());
+
+      await act(async () => {
+        result.current.open();
+      });
+
+      await waitFor(() => {
+        expect(result.current.isOpen).toBe(true);
+      }, { timeout: 1000 });
+
+      const isFullscreen = await result.current.fullscreen();
+
+      expect(isFullscreen).toBe(true);
+      expect(mockDocument.documentElement?.requestFullscreen).toHaveBeenCalled();
+    });
+
+    it('should return false if fullscreen API is not available', async () => {
+      mockDocument.documentElement = {} as any; // Remove requestFullscreen
+      const { result } = renderHook(() => useExternalWindow());
+
+      await act(async () => {
+        result.current.open();
+      });
+
+      await waitFor(() => {
+        expect(result.current.isOpen).toBe(true);
+      }, { timeout: 1000 });
+
+      const isFullscreen = await result.current.fullscreen();
+
+      expect(isFullscreen).toBe(false);
+    });
+
+    it('should return false if window is closed', async () => {
+      const { result } = renderHook(() => useExternalWindow());
+
+      const isFullscreen = await result.current.fullscreen();
+
+      expect(isFullscreen).toBe(false);
+    });
+
+    it('should return false if fullscreen request is denied', async () => {
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      (mockDocument.documentElement as any).requestFullscreen = vi.fn(async () => {
+        throw new Error('Fullscreen request denied');
+      });
+
+      const { result } = renderHook(() => useExternalWindow());
+
+      await act(async () => {
+        result.current.open();
+      });
+
+      await waitFor(() => {
+        expect(result.current.isOpen).toBe(true);
+      }, { timeout: 1000 });
+
+      const isFullscreen = await result.current.fullscreen();
+
+      expect(isFullscreen).toBe(false);
+      expect(consoleWarnSpy).toHaveBeenCalled();
+
+      consoleWarnSpy.mockRestore();
+    });
+
+    it('should support webkit vendor prefix for fullscreen', async () => {
+      const mockWebkitFullscreen = vi.fn(async function(this: any) {
+        return Promise.resolve();
+      });
+      mockDocument.documentElement = {
+        webkitRequestFullscreen: mockWebkitFullscreen,
+      } as any;
+
+      const { result } = renderHook(() => useExternalWindow());
+
+      await act(async () => {
+        result.current.open();
+      });
+
+      await waitFor(() => {
+        expect(result.current.isOpen).toBe(true);
+      }, { timeout: 1000 });
+
+      const isFullscreen = await result.current.fullscreen();
+
+      expect(isFullscreen).toBe(true);
+      expect(mockWebkitFullscreen).toHaveBeenCalled();
+    });
+
+    it('should support moz vendor prefix for fullscreen', async () => {
+      const mockMozFullscreen = vi.fn(async function(this: any) {
+        return Promise.resolve();
+      });
+      mockDocument.documentElement = {
+        mozRequestFullScreen: mockMozFullscreen,
+      } as any;
+
+      const { result } = renderHook(() => useExternalWindow());
+
+      await act(async () => {
+        result.current.open();
+      });
+
+      await waitFor(() => {
+        expect(result.current.isOpen).toBe(true);
+      }, { timeout: 1000 });
+
+      const isFullscreen = await result.current.fullscreen();
+
+      expect(isFullscreen).toBe(true);
+      expect(mockMozFullscreen).toHaveBeenCalled();
+    });
+
+    it('should support ms vendor prefix for fullscreen', async () => {
+      const mockMsFullscreen = vi.fn(async function(this: any) {
+        return Promise.resolve();
+      });
+      mockDocument.documentElement = {
+        msRequestFullscreen: mockMsFullscreen,
+      } as any;
+
+      const { result } = renderHook(() => useExternalWindow());
+
+      await act(async () => {
+        result.current.open();
+      });
+
+      await waitFor(() => {
+        expect(result.current.isOpen).toBe(true);
+      }, { timeout: 1000 });
+
+      const isFullscreen = await result.current.fullscreen();
+
+      expect(isFullscreen).toBe(true);
+      expect(mockMsFullscreen).toHaveBeenCalled();
+    });
+
+  it('should detect fullscreen API availability', async () => {
+    const { result } = renderHook(() => useExternalWindow());
+
+    expect(result.current.canFullscreen).toBe(false);
+
+    await act(async () => {
+      result.current.open();
+    });
+
+    await waitFor(() => {
+      expect(result.current.isOpen).toBe(true);
+    }, { timeout: 1000 });
+
+    expect(result.current.canFullscreen).toBe(true);
+  });
+});

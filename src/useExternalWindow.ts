@@ -79,6 +79,9 @@ export function useExternalWindow(
   // Ref to store the interval for checking if window is closed
   const checkWindowIntervalRef = useRef<number | null>(null);
 
+  // Ref to store whether fullscreen API is available
+  const canFullscreenRef = useRef<boolean>(false);
+
   /**
    * Copy styles from parent window to external window
    */
@@ -176,6 +179,15 @@ export function useExternalWindow(
     const setupPortalContainer = () => {
       // Set title
       newWindow.document.title = title;
+
+      // Check if fullscreen API is available
+      const docEl = newWindow.document.documentElement;
+      canFullscreenRef.current = !!(
+        docEl.requestFullscreen ||
+        (docEl as any).webkitRequestFullscreen ||
+        (docEl as any).mozRequestFullScreen ||
+        (docEl as any).msRequestFullscreen
+      );
 
       // Copy styles from parent window
       copyStylesToWindow(newWindow);
@@ -279,6 +291,41 @@ export function useExternalWindow(
   }, []);
 
   /**
+   * Request fullscreen mode for the external window
+   * Returns true if fullscreen was requested, false if API is unavailable or failed
+   */
+  const fullscreen = useCallback(async (): Promise<boolean> => {
+    if (!externalWindowRef.current || externalWindowRef.current.closed) {
+      return false;
+    }
+
+    try {
+      const doc = externalWindowRef.current.document;
+      const docEl = doc.documentElement;
+
+      // Check for various fullscreen API implementations (vendor prefixes)
+      const requestFullscreen =
+        docEl.requestFullscreen ||
+        (docEl as any).webkitRequestFullscreen ||
+        (docEl as any).mozRequestFullScreen ||
+        (docEl as any).msRequestFullscreen;
+
+      if (!requestFullscreen) {
+        // Fullscreen API not supported on this device/browser
+        return false;
+      }
+
+      // Call the appropriate fullscreen method
+      await requestFullscreen.call(docEl);
+      return true;
+    } catch (e) {
+      // Fullscreen request denied or failed
+      console.warn('Could not request fullscreen for external window:', e);
+      return false;
+    }
+  }, []);
+
+  /**
    * Handle window close (cleanup)
    */
   const handleWindowClose = useCallback(() => {
@@ -316,6 +363,8 @@ export function useExternalWindow(
     resize,
     move,
     focus,
+    fullscreen,
+    canFullscreen: canFullscreenRef.current,
     isOpen,
   };
 }

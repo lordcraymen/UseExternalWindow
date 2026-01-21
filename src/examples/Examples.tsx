@@ -261,6 +261,137 @@ export function AdvancedExample() {
 }
 
 /**
+ * Example component demonstrating fullscreen API
+ */
+export function FullscreenExample() {
+  const { portalTarget, open, close, isOpen, fullscreen, canFullscreen } = useExternalWindow({
+    title: 'Fullscreen Window',
+    features: {
+      width: 800,
+      height: 600,
+      left: 200,
+      top: 200
+    }
+  });
+
+  const [fullscreenStatus, setFullscreenStatus] = React.useState<string>('');
+
+  const handleFullscreen = async () => {
+    setFullscreenStatus('Requesting fullscreen...');
+    const success = await fullscreen();
+    
+    if (success) {
+      setFullscreenStatus('✅ Fullscreen enabled!');
+    } else {
+      setFullscreenStatus('❌ Fullscreen request denied (common on mobile)');
+    }
+  };
+
+  return (
+    <div style={{ padding: '20px' }}>
+      <h1>Fullscreen Example</h1>
+      <p>Demonstrates the fullscreen API - gracefully handles devices that don't support it.</p>
+      <div style={{ marginTop: '20px' }}>
+        <button 
+          onClick={open}
+          style={{ marginRight: '10px', padding: '10px 20px' }}
+        >
+          {isOpen ? 'Focus Window' : 'Open Window'}
+        </button>
+        <button 
+          onClick={close}
+          disabled={!isOpen}
+          style={{ marginRight: '10px', padding: '10px 20px' }}
+        >
+          Close Window
+        </button>
+      </div>
+      
+      {fullscreenStatus && (
+        <div style={{ marginTop: '10px', padding: '10px', background: '#f0f0f0', borderRadius: '4px' }}>
+          {fullscreenStatus}
+        </div>
+      )}
+      
+      {portalTarget && createPortal(
+        <FullscreenContent onFullscreen={handleFullscreen} onClose={close} canFullscreen={canFullscreen} />
+        ,
+        portalTarget
+      )}
+    </div>
+  );
+}
+
+function FullscreenContent({ onFullscreen, onClose, canFullscreen }: { onFullscreen: () => Promise<void>; onClose: () => void; canFullscreen: boolean }) {
+  const { fullscreen } = useExternalWindowContext();
+  
+  return (
+    <div 
+      style={{
+        padding: '30px',
+        background: '#1a1a1a',
+        color: '#ffffff',
+        minHeight: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+        fontFamily: 'system-ui, -apple-system, sans-serif'
+      }}
+    >
+      <div>
+        <h1>Fullscreen Window</h1>
+        <p>This window has fullscreen support!</p>
+        <p style={{ fontSize: '14px', color: '#aaa' }}>
+          Note: Fullscreen requires user interaction and may not be supported on all devices 
+          (e.g., mobile Safari). The fullscreen() method gracefully returns false if unavailable.
+        </p>
+      </div>
+      
+      <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+        {canFullscreen && (
+          <button 
+            onClick={fullscreen}
+            style={{
+              padding: '10px 20px',
+              background: '#4CAF50',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontWeight: 'bold',
+              fontSize: '16px'
+            }}
+          >
+            🖥️ Go Fullscreen
+          </button>
+        )}
+        
+        {!canFullscreen && (
+          <div style={{ padding: '10px 20px', color: '#aaa', fontSize: '14px' }}>
+            Fullscreen API not available on this device
+          </div>
+        )}
+        
+        <button 
+          onClick={onClose}
+          style={{
+            padding: '10px 20px',
+            background: '#f44336',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontWeight: 'bold'
+          }}
+        >
+          Close Window
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/**
  * Example component demonstrating multi-window setup
  */
 export function MultiWindowExample() {

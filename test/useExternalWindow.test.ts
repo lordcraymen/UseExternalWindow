@@ -503,8 +503,7 @@ describe('useExternalWindow with object features', () => {
       const wrapper = ({ children }: any) =>
         React.createElement(
           ExternalWindowProvider,
-          { value: contextValue },
-          children
+          { value: contextValue, children },
         );
 
       const { result } = renderHook(() => useExternalWindowContext(), { wrapper });
@@ -531,8 +530,7 @@ describe('useExternalWindow with object features', () => {
       const wrapper = ({ children }: any) =>
         React.createElement(
           ExternalWindowProvider,
-          { value: contextValue },
-          children
+          { value: contextValue, children },
         );
 
       const { result } = renderHook(

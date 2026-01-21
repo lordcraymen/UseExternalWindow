@@ -171,13 +171,9 @@ export function useExternalWindow(
     }
 
     externalWindowRef.current = newWindow;
-    
-    // Set isOpen immediately after window opens successfully
-    // This must be outside the load event to avoid race conditions with about:blank
-    setIsOpen(true);
 
-    // Wait for window to load
-    newWindow.addEventListener('load', () => {
+    // Setup function to create the portal container
+    const setupPortalContainer = () => {
       // Set title
       newWindow.document.title = title;
 
@@ -209,10 +205,21 @@ export function useExternalWindow(
 
       // Update state with portal target reference (triggers rerender)
       setPortalTarget(container);
+      setIsOpen(true);
 
       // Call onOpen callback
       onOpen?.(newWindow);
-    });
+    };
+
+    // For about:blank, the document is immediately ready
+    // For other URLs, we need to wait for the load event
+    if (newWindow.document.readyState === 'complete' || url === 'about:blank') {
+      // Document is ready, set up immediately
+      setupPortalContainer();
+    } else {
+      // Wait for window to load
+      newWindow.addEventListener('load', setupPortalContainer);
+    }
 
     // Poll to check if window is closed
     checkWindowIntervalRef.current = window.setInterval(() => {

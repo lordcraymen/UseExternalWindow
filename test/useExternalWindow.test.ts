@@ -20,6 +20,7 @@ describe('useExternalWindow', () => {
       body: document.createElement('body'),
       createElement: (tagName: string) => document.createElement(tagName),
       styleSheets: [] as unknown as StyleSheetList,
+      readyState: 'complete', // about:blank is immediately ready
     };
 
     // Create mock window
@@ -32,8 +33,13 @@ describe('useExternalWindow', () => {
       focus: vi.fn(),
       addEventListener: vi.fn((event, handler) => {
         if (event === 'load') {
-          // Simulate immediate load event
-          setTimeout(() => (handler as EventListener)(new Event('load')), 0);
+          // For about:blank, document is already complete
+          // So this simulates the race condition - load event may not fire
+          // or fires before addEventListener is called
+          // Only fire if document isn't already complete
+          if (mockDocument.readyState !== 'complete') {
+            setTimeout(() => (handler as EventListener)(new Event('load')), 0);
+          }
         }
       }),
       removeEventListener: vi.fn(),

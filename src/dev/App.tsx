@@ -3,8 +3,9 @@ import { BasicExample } from '../examples/Examples';
 import { AdvancedExample } from '../examples/Examples';
 import { MultiWindowExample } from '../examples/Examples';
 import { ContextExample } from '../examples/Examples';
+import { FullscreenExample } from '../examples/Examples';
 
-type ExampleTab = 'basic' | 'advanced' | 'multi' | 'context';
+type ExampleTab = 'basic' | 'advanced' | 'multi' | 'context' | 'fullscreen';
 
 export function ExamplesApp() {
   const [activeTab, setActiveTab] = useState<ExampleTab>('basic');
@@ -14,6 +15,7 @@ export function ExamplesApp() {
     { id: 'advanced', label: 'Advanced Example', component: <AdvancedExample /> },
     { id: 'multi', label: 'Multi-Window Example', component: <MultiWindowExample /> },
       { id: 'context', label: 'Undock/Context Example', component: <ContextExample /> },
+      { id: 'fullscreen', label: 'Fullscreen Example', component: <FullscreenExample /> },
   ];
 
   return (
@@ -25,8 +27,7 @@ export function ExamplesApp() {
           padding: '40px 20px',
           marginBottom: '30px',
           borderRadius: '12px',
-          backdropFilter: 'blur(10px)',
-          marginBottom: '30px',
+          backdropFilter: 'blur(10px)'
         }}
       >
         <h1 style={{ fontSize: '2.5em', marginBottom: '10px' }}>useExternalWindow</h1>

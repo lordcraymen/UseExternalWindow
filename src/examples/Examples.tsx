@@ -51,7 +51,7 @@ export function BasicExample() {
    * from within the portal content (e.g., undock/redock buttons inside the window)
    */
   export function ContextExample() {
-    const { portalTarget, open, close, isOpen, resize, move, focus, externalWindow } = useExternalWindow({
+    const { portalTarget, open, close, isOpen, resize, move, focus, fullscreen, canFullscreen, externalWindow } = useExternalWindow({
       title: 'Undockable Window',
       features: {
         width: 600,
@@ -79,7 +79,7 @@ export function BasicExample() {
         </div>
       
         {portalTarget && createPortal(
-          <ExternalWindowProvider value={{ close, resize, move, focus, externalWindow }}>
+          <ExternalWindowProvider value={{ close, resize, move, focus, fullscreen, canFullscreen, externalWindow }}>
             <UndockableContent />
           </ExternalWindowProvider>,
           portalTarget
@@ -264,7 +264,7 @@ export function AdvancedExample() {
  * Example component demonstrating fullscreen API
  */
 export function FullscreenExample() {
-  const { portalTarget, open, close, isOpen, fullscreen, canFullscreen } = useExternalWindow({
+  const { portalTarget, open, close, isOpen, resize, move, focus, fullscreen, canFullscreen, externalWindow } = useExternalWindow({
     title: 'Fullscreen Window',
     features: {
       width: 800,
@@ -273,19 +273,6 @@ export function FullscreenExample() {
       top: 200
     }
   });
-
-  const [fullscreenStatus, setFullscreenStatus] = React.useState<string>('');
-
-  const handleFullscreen = async () => {
-    setFullscreenStatus('Requesting fullscreen...');
-    const success = await fullscreen();
-    
-    if (success) {
-      setFullscreenStatus('✅ Fullscreen enabled!');
-    } else {
-      setFullscreenStatus('❌ Fullscreen request denied (common on mobile)');
-    }
-  };
 
   return (
     <div style={{ padding: '20px' }}>
@@ -307,14 +294,10 @@ export function FullscreenExample() {
         </button>
       </div>
       
-      {fullscreenStatus && (
-        <div style={{ marginTop: '10px', padding: '10px', background: '#f0f0f0', borderRadius: '4px' }}>
-          {fullscreenStatus}
-        </div>
-      )}
-      
       {portalTarget && createPortal(
-        <FullscreenContent onFullscreen={handleFullscreen} onClose={close} canFullscreen={canFullscreen} />
+        <ExternalWindowProvider value={{ close, resize, move, focus, fullscreen, canFullscreen, externalWindow }}>
+          <FullscreenContent onClose={close} canFullscreen={canFullscreen} />
+        </ExternalWindowProvider>
         ,
         portalTarget
       )}
@@ -322,8 +305,61 @@ export function FullscreenExample() {
   );
 }
 
-function FullscreenContent({ onFullscreen, onClose, canFullscreen }: { onFullscreen: () => Promise<void>; onClose: () => void; canFullscreen: boolean }) {
-  const { fullscreen } = useExternalWindowContext();
+function FullscreenContent({ onClose, canFullscreen }: { onClose: () => void; canFullscreen: boolean }) {
+  const { fullscreen, externalWindow } = useExternalWindowContext();
+  const [isFullscreen, setIsFullscreen] = React.useState(false);
+  
+  React.useEffect(() => {
+    if (!externalWindow) return;
+    
+    const handleFullscreenChange = () => {
+      const doc = externalWindow.document as any;
+      const isInFullscreen = !!(
+        doc.fullscreenElement ||
+        doc.webkitFullscreenElement ||
+        doc.mozFullScreenElement ||
+        doc.msFullscreenElement
+      );
+      setIsFullscreen(isInFullscreen);
+    };
+    
+    externalWindow.document.addEventListener('fullscreenchange', handleFullscreenChange);
+    externalWindow.document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    externalWindow.document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+    externalWindow.document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+    
+    return () => {
+      externalWindow.document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      externalWindow.document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+      externalWindow.document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
+      externalWindow.document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
+    };
+  }, [externalWindow]);
+  
+  const handleToggleFullscreen = async () => {
+    if (isFullscreen) {
+      // Exit fullscreen
+      const doc = externalWindow?.document as any;
+      if (doc) {
+        const exitFullscreen = 
+          doc.exitFullscreen ||
+          doc.webkitExitFullscreen ||
+          doc.mozCancelFullScreen ||
+          doc.msExitFullscreen;
+        
+        if (exitFullscreen) {
+          try {
+            await exitFullscreen.call(doc);
+          } catch (err) {
+            console.warn('Failed to exit fullscreen:', err);
+          }
+        }
+      }
+    } else {
+      // Enter fullscreen
+      await fullscreen();
+    }
+  };
   
   return (
     <div 
@@ -345,15 +381,20 @@ function FullscreenContent({ onFullscreen, onClose, canFullscreen }: { onFullscr
           Note: Fullscreen requires user interaction and may not be supported on all devices 
           (e.g., mobile Safari). The fullscreen() method gracefully returns false if unavailable.
         </p>
+        {isFullscreen && (
+          <p style={{ fontSize: '14px', color: '#4CAF50', marginTop: '10px' }}>
+            ✓ Currently in fullscreen mode
+          </p>
+        )}
       </div>
       
       <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
         {canFullscreen && (
           <button 
-            onClick={fullscreen}
+            onClick={handleToggleFullscreen}
             style={{
               padding: '10px 20px',
-              background: '#4CAF50',
+              background: isFullscreen ? '#FF9800' : '#4CAF50',
               color: 'white',
               border: 'none',
               borderRadius: '4px',
@@ -362,7 +403,7 @@ function FullscreenContent({ onFullscreen, onClose, canFullscreen }: { onFullscr
               fontSize: '16px'
             }}
           >
-            🖥️ Go Fullscreen
+            {isFullscreen ? '🔻 Exit Fullscreen' : '🖥️ Go Fullscreen'}
           </button>
         )}
         

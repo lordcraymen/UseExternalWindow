@@ -499,6 +499,8 @@ describe('useExternalWindow with object features', () => {
         resize: mockResize,
         move: mockMove,
         focus: mockFocus,
+        fullscreen: vi.fn(async () => false),
+        canFullscreen: false,
         externalWindow: mockWindow,
       };
 
@@ -526,6 +528,8 @@ describe('useExternalWindow with object features', () => {
         resize: mockResize,
         move: vi.fn(),
         focus: vi.fn(),
+        fullscreen: vi.fn(async () => false),
+        canFullscreen: false,
         externalWindow: null,
       };
 
@@ -614,7 +618,7 @@ describe('useExternalWindow with object features', () => {
     });
 
     it('should return false if fullscreen API is not available', async () => {
-      mockDocument.documentElement = {} as any; // Remove requestFullscreen
+      Object.defineProperty(mockDocument, 'documentElement', { value: {}, writable: true, configurable: true });
       const { result } = renderHook(() => useExternalWindow());
 
       await act(async () => {
@@ -666,9 +670,9 @@ describe('useExternalWindow with object features', () => {
       const mockWebkitFullscreen = vi.fn(async function(this: any) {
         return Promise.resolve();
       });
-      mockDocument.documentElement = {
+      Object.defineProperty(mockDocument, 'documentElement', { value: {
         webkitRequestFullscreen: mockWebkitFullscreen,
-      } as any;
+      }, writable: true, configurable: true });
 
       const { result } = renderHook(() => useExternalWindow());
 
@@ -690,9 +694,9 @@ describe('useExternalWindow with object features', () => {
       const mockMozFullscreen = vi.fn(async function(this: any) {
         return Promise.resolve();
       });
-      mockDocument.documentElement = {
+      Object.defineProperty(mockDocument, 'documentElement', { value: {
         mozRequestFullScreen: mockMozFullscreen,
-      } as any;
+      }, writable: true, configurable: true });
 
       const { result } = renderHook(() => useExternalWindow());
 
@@ -714,9 +718,9 @@ describe('useExternalWindow with object features', () => {
       const mockMsFullscreen = vi.fn(async function(this: any) {
         return Promise.resolve();
       });
-      mockDocument.documentElement = {
+      Object.defineProperty(mockDocument, 'documentElement', { value: {
         msRequestFullscreen: mockMsFullscreen,
-      } as any;
+      }, writable: true, configurable: true });
 
       const { result } = renderHook(() => useExternalWindow());
 

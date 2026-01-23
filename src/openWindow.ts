@@ -39,15 +39,13 @@ type WindowEventHandlers = {
     [K in AllWindowEvents]?: WindowEventHandler<K>;
 };
 
-const noop = () => { };
+const noop = () => {};
 
 function openWindow(url: string = "", name: string = "", features: WindowFeatures = {}, events: WindowEventHandlers = {}): () => void {
 
     const windowRef = window.open(url, name, serializeWindowFeatures(features));
     // return early noop if window failed to open
     if (!windowRef) { return noop; }
-
-
 
     const eventList: (() => void)[] = []
 

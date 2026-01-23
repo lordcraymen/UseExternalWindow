@@ -90,14 +90,7 @@ function openWindow(url: string = "", name: string = "", features: WindowFeature
 
 function withNavigationTracking(openWindowFn: typeof openWindow): typeof openWindow {
     return function (url: string = "", name: string = "", features: WindowFeatures = {}, events: WindowEventHandlers = {}): Window | null {
-        const navigationHandler = events.navigation;
         let lastUrl = url;
-        events.navigation = function (ev: NavigationEvent): void {
-            if (ev.url !== lastUrl) {
-                lastUrl = ev.url;
-                navigationHandler && navigationHandler(ev);
-            }
-        };
         const windowRef = openWindowFn(url, name, features, events);
 
         // poll the window's location to detect navigation changes

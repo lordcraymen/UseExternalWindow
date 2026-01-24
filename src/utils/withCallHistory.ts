@@ -1,50 +1,42 @@
-type IdentityTransform<Args extends unknown[]> = (args: Args) => Args;
+type AnyFn = (...args: any[]) => any;
 
-// Overloads for better type inference
+type WithCallHistory<F extends AnyFn, StoreKey extends PropertyKey, Entry> =
+  F & { [K in StoreKey]: Entry[] };
+
+// Overload 1: no transform -> entries are exactly the original args tuple
 function withCallHistory<
-  F extends (...args: any[]) => any,
-  H extends string | symbol = 'callHistory'
+  F extends AnyFn,
+  StoreKey extends PropertyKey = "callHistory"
 >(
   fn: F,
-  onBeforeStorage?: undefined,
-  historyReference?: H
-): typeof fn & { [P in H]: Parameters<F>[] };
+  storeName?: StoreKey
+): WithCallHistory<F, StoreKey, Parameters<F>>;
 
+// Overload 2: with transform -> entries are whatever transform returns
 function withCallHistory<
-  F extends (...args: any[]) => any,
-  R extends unknown[],
-  H extends string | symbol = 'callHistory'
+  F extends AnyFn,
+  StoreKey extends PropertyKey = "callHistory",
+  Entry = unknown
 >(
   fn: F,
-  onBeforeStorage: (args: Parameters<F>) => R,
-  historyReference?: H
-): typeof fn & { [P in H]: R[] };
+  storeName: StoreKey | undefined,
+  beforeStorage: (args: Parameters<F>) => Entry
+): WithCallHistory<F, StoreKey, Entry>;
 
-function withCallHistory<
-  F extends (...args: any[]) => any,
-  Transform extends (args: Parameters<F>) => unknown[] = IdentityTransform<Parameters<F>>,
-  H extends string | symbol = 'callHistory'
->(
-  fn: F,
-  onBeforeStorage?: Transform,
-  historyReference: H = 'callHistory' as H  
-){
-  type HistoryEntry = ReturnType<Transform>;
-  const callHistory: HistoryEntry[] = [];
-  const transform: Transform = (onBeforeStorage ?? ((args => args) as IdentityTransform<Parameters<F>>)) as Transform;
-
-  const wrappedFunction = (...args: Parameters<F>): ReturnType<F> => {
-    callHistory.push(transform(args) as HistoryEntry);
+// Implementation
+function withCallHistory(
+  fn: AnyFn,
+  storeName: PropertyKey = "callHistory",
+  beforeStorage?: (args: any[]) => unknown
+) {
+  const wrapped = ((...args: any[]) => {
+    const entry = beforeStorage ? beforeStorage(args) : args;
+    (wrapped as any)[storeName].push(entry);
     return fn(...args);
-  };
+  }) as any;
 
-  type Wrapped = typeof wrappedFunction & {
-    [P in H]: HistoryEntry[]
-  };
-
-  (wrappedFunction as any)[historyReference] = callHistory;
-
-  return wrappedFunction as Wrapped;
+  wrapped[storeName] = [];
+  return wrapped;
 }
 
 export { withCallHistory };

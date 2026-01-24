@@ -66,7 +66,7 @@ function openWindow(url: string = "", name: string = "", features: WindowFeature
 
     const originalClose = windowRef.close;
     windowRef.close = function (): void {
-        const events = (windowRef.addEventListener as any).callHistory
+        const events = windowRef.addEventListener["callHistory"]
         while (events.length) { windowRef.removeEventListener(...(events.pop() as any[])); }
         const windowRefName = windowRef.name || undefined;
         windowRef.close = originalClose;

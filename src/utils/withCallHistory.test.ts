@@ -15,7 +15,7 @@ describe('withCallHistory', () => {
     it('should use custom onBeforeStore function', () => {
         const multiply = (a: number, b: number) => a * b;
         const onBeforeStore = (args: [number, number]) => [args[0]]; // Store only the first argument as array
-        const multiplyWithHistory = withCallHistory(multiply, onBeforeStore);
+        const multiplyWithHistory = withCallHistory(multiply, undefined, onBeforeStore);
 
         expect(multiplyWithHistory(2, 3)).toBe(6);
 
@@ -25,7 +25,7 @@ describe('withCallHistory', () => {
 
     it('should use custom history reference', () => {
         const greet = (name: string) => `Hello, ${name}!`;
-        const greetWithHistory = withCallHistory(greet, undefined, 'greetHistory');
+        const greetWithHistory = withCallHistory(greet,'greetHistory');
 
         expect(greetWithHistory('Alice')).toBe('Hello, Alice!');
         expect(greetWithHistory('Bob')).toBe('Hello, Bob!');

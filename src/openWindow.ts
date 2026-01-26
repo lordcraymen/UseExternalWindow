@@ -1,5 +1,6 @@
 import type { WindowFeatures } from "./types";
 import { serializeWindowFeatures } from "./windowFeatures";
+import { withCallHistory } from "./utils/withCallHistory";
 
 // Define custom event interfaces
 interface CreateEvent {
@@ -51,28 +52,10 @@ function openWindow(url: string = "", name: string = "", features: WindowFeature
     // return early noop if window failed to open
     if (!windowRef) { return null }
 
-    const eventList: (() => void)[] = []
-
     //monkey patch close to remove all event listeners before closing
-    const originalClose = windowRef.close;
-    windowRef.close = function (): void {
-        while (eventList.length) { eventList.pop()!(); }
-        const windowRefName = windowRef.name || undefined;
-        windowRef.close = originalClose;
-        windowRef.close();
-        events.afterClosed && events.afterClosed({ type: "afterClosed", windowName: windowRefName });
-    };
 
-    //monkey patch addEventListener to track added event listeners
-    const originalAddEventListener = windowRef?.addEventListener;
-    windowRef.addEventListener = function (type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void {
-        originalAddEventListener.call(this, type, listener, options);
-        eventList.push(() => {
-            this.removeEventListener(type, listener, options);
-        });
-    };
-
-
+    // monkey patch addEventListener to track added event listeners using withCallHistory
+    windowRef.addEventListener = withCallHistory(windowRef.addEventListener);
     for (const [eventName, eventHandler] of Object.entries(events) as [AllWindowEvents, WindowEventHandler<any>][]) {
         if (eventName === "create" || eventName === "navigation" || eventName === "afterClosed") {
             // Skip custom events in addEventListener - they're called directly
@@ -80,6 +63,16 @@ function openWindow(url: string = "", name: string = "", features: WindowFeature
         }
         windowRef.addEventListener(eventName, eventHandler as EventListener);
     }
+
+    const originalClose = windowRef.close;
+    windowRef.close = function (): void {
+        const events = windowRef.addEventListener["callHistory"]
+        while (events.length) { windowRef.removeEventListener(...(events.pop() as any[])); }
+        const windowRefName = windowRef.name || undefined;
+        windowRef.close = originalClose;
+        windowRef.close();
+        events.afterClosed && events.afterClosed({ type: "afterClosed", windowName: windowRefName });
+    };
 
 
     //dispatch create event
